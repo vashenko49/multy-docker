@@ -1,0 +1,100 @@
+version: "3.8"
+
+services:
+
+  redis:
+    container_name: redis
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_PORT_NUMBER=7000
+    ports:
+      - '7000:7000'
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+
+  redis-commander:
+    depends_on:
+      - redis
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    build: .
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:7000
+    ports:
+      - '7002:8081'
+
+
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+
+
+
+  client:
+    container_name: client-dev
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+      target: development
+    volumes:
+      - ./client/src:/app/src
+    ports:
+      - 3000:3000
+
+  server:
+    container_name: server-dev
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+      target: development
+    volumes:
+      - ./server:/app
+    ports:
+      - 3001:3000
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    container_name: worker-dev
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.dev
+      target: development
+    volumes:
+      - ./worker:/app
+    ports:
+      - 3002:3000
+      - "1337:1337"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    depends_on:
+      - server
+      - client
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
+
+volumes:
+  redis_data:
+  db:
