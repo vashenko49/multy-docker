@@ -12,7 +12,7 @@ before_install:
   - docker build -t vashenko49/react-test -f ./client/Dockerfile.dev ./client
 
 script:
-  - docker run -e CI=true vashenko49/react-test npm test
+  - docker run -e CI=true vashenko49/react-test yarn run test
 
 after_success:
   - docker build -t vashenko49/multi-client ./client
